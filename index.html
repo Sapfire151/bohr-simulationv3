@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>แบบจำลองอะตอมของโบร์ (Bohr model) Simulation</title>
+<style>
+  body {
+    margin: 0;
+    background: #0d1117;
+    color: white;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+    min-height: 100vh;
+  }
+  .big-header {
+    font-size: 4.5rem;
+    font-weight: 900;
+    background: linear-gradient(90deg, #1abc9c, #16a085);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 3px 6px rgba(22, 160, 133, 0.7));
+    margin-bottom: 20px;
+    user-select: text;
+    line-height: 1.1;
+    max-width: 900px;
+  }
+  .description {
+    max-width: 900px;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #b0dcd9;
+    margin-bottom: 40px;
+    line-height: 1.5;
+    user-select: text;
+  }
+  .input-container {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #1abc9c;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+    margin-bottom: 30px;
+  }
+  input[type="number"] {
+    width: 60px;
+    padding: 10px 14px;
+    font-size: 1.1rem;
+    border-radius: 20px;
+    border: 2px solid #1abc9c;
+    background: #121b22;
+    color: #e0f7f9;
+    box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.8);
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+    outline-offset: 2px;
+    outline-color: transparent;
+    cursor: pointer;
+  }
+  input[type="number"]:focus {
+    border-color: #16a085;
+    background: #164d4d;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.7);
+    outline-color: #16a085;
+  }
+  #shellName {
+    font-weight: 700;
+    font-size: 1.4rem;
+    color: #16a085;
+    user-select: text;
+    min-width: 25px;
+    text-align: center;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.5));
+  }
+  .canvas-container {
+    display: inline-block;
+    border-radius: 20px;
+    background: radial-gradient(#1a1a1a, #000);
+    padding: 10px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.7);
+  }
+  canvas {
+    display: block;
+    border-radius: 20px;
+    background: transparent;
+  }
+</style>
+</head>
+<body>
+
+  <div class="big-header" aria-label="แบบจำลองอะตอมของโบร์ Bohr model">
+    แบบจำลองอะตอมของโบร์ (Bohr model)
+  </div>
+
+  <div class="input-container">
+    <label for="energyLevel">ตั้งค่าระดับพลังงาน (n):</label>
+    <input type="number" id="energyLevel" min="1" max="5" value="1" />
+    <span id="shellName">K</span>
+  </div>
+
+  <div class="canvas-container">
+    <canvas id="atomCanvas" width="500" height="500"></canvas>
+  </div>
+
+<script>
+  const shellMap = { 1: "K", 2: "L", 3: "M", 4: "N", 5: "O" };
+
+  const canvas = document.getElementById("atomCanvas");
+  const ctx = canvas.getContext("2d");
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  const maxOrbit = 200;
+  const baseOrbitRadiusUnit = maxOrbit / 5;
+
+  let currentN = 1; // Represents the shell the electron IS IN or IS DEPARTING FROM during transition
+  let targetN = 1;  // Represents the shell the electron IS GOING TO
+  let currentRadius = baseOrbitRadiusUnit * currentN;
+
+  let pulse = 0;
+  let energyChange = 0;
+  let colorTransitionProgress = 0;
+  let electronColor = { r: 231, g: 76, b: 60 };
+
+  const trail = [];
+  const photons = [];
+
+  let orbitTransition = {
+    active: false,
+    progress: 0,
+    startRadius: currentRadius,
+    endRadius: currentRadius,
+  };
+
+  let lastTime = performance.now();
+  let electronAccumulatedAngle = 0;
+  let easedRadius = currentRadius; // Initialize easedRadius
+
+  const shellNameSpan = document.getElementById("shellName");
+  const energyInput = document.getElementById("energyLevel");
+
+  energyInput.addEventListener("change", e => {
+    const newN = Math.max(1, Math.min(5, parseInt(e.target.value)));
+    // Only start a new transition if the target is different from the current eventual target,
+    // or if we are not currently transitioning, or if the target is different from the current stable shell.
+    if (newN !== targetN || !orbitTransition.active || (newN !== currentN && !orbitTransition.active) ) {
+        energyChange = newN > currentN ? 1 : -1; // Direction based on current stable N
+        pulse = 1;
+        targetN = newN; // Set the ultimate destination
+        const newTargetRadius = baseOrbitRadiusUnit * targetN;
+        colorTransitionProgress = 1;
+
+        photons.push({ /* ... photon properties ... */ }); // Assuming photon code is fine
+
+        orbitTransition.active = true;
+        orbitTransition.progress = 0;
+        // startRadius should be the radius of the shell we are *currently* departing from,
+        // which is related to 'currentN' (the stable shell before this change).
+        // Or, if interrupting another transition, it's current 'easedRadius'.
+        orbitTransition.startRadius = easedRadius;
+        orbitTransition.endRadius = newTargetRadius;
+
+        updateShellName(targetN);
+    }
+  });
+
+  function updateShellName(n) {
+    shellNameSpan.textContent = shellMap[n] || "";
+  }
+
+  function getElectronColor() { /* ... unchanged ... */
+    let r = 231, g = 76, b = 60;
+    if (energyChange === 1) { r = 0; g = 255; b = 255; }
+    else if (energyChange === -1) { r = 255; g = 180; b = 0; }
+
+    if (colorTransitionProgress > 0.01) {
+      electronColor.r += (r - electronColor.r) * 0.05;
+      electronColor.g += (g - electronColor.g) * 0.05;
+      electronColor.b += (b - electronColor.b) * 0.05;
+      colorTransitionProgress *= 0.95;
+    } else {
+      electronColor.r += (231 - electronColor.r) * 0.02;
+      electronColor.g += (76 - electronColor.g) * 0.02;
+      electronColor.b += (60 - electronColor.b) * 0.02;
+    }
+    return `rgb(${electronColor.r.toFixed(0)},${electronColor.g.toFixed(0)},${electronColor.b.toFixed(0)})`;
+  }
+
+
+  function drawNucleus() { /* ... unchanged ... */
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 20, 0, Math.PI * 2);
+    ctx.fillStyle = "#f39c12";
+    ctx.shadowColor = "#f39c12";
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  // NEW HELPER FUNCTION: Draws a single shell line and label with given alpha
+  function drawShellLine(n_value, alpha) {
+    if (n_value < 1 || n_value > 5 || alpha <= 0) return; // Basic validation & optimization
+
+    const radius = baseOrbitRadiusUnit * n_value;
+    const shellLetter = shellMap[n_value];
+
+    // Base color components (can be adjusted)
+    const lineR = 100, lineG = 150, lineB = 255; // For orbit line
+    const labelR = 150, labelG = 200, labelB = 255; // For label text
+
+    // Draw orbit line (dashed)
+    ctx.beginPath();
+    // Apply the main alpha to the existing alpha of the style
+    ctx.strokeStyle = `rgba(${lineR},${lineG},${lineB},${0.3 * alpha})`;
+    ctx.setLineDash([5, 5]);
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Draw shell label
+    if (shellLetter) {
+      ctx.fillStyle = `rgba(${labelR},${labelG},${labelB},${0.7 * alpha})`;
+      ctx.font = "14px 'Segoe UI'";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(shellLetter, centerX + radius + 8, centerY);
+    }
+  }
+
+  // MODIFIED/RENAMED FUNCTION: Handles animated fade in/out of shell lines
+  function drawAnimatedShellChange() {
+    if (orbitTransition.active) {
+      const progress = orbitTransition.progress;
+      // currentN is the shell the electron is coming FROM
+      // targetN is the shell the electron is going TO
+      const departingN_val = Math.round(orbitTransition.startRadius / baseOrbitRadiusUnit); // More accurate departing N
+      const arrivingN_val = targetN;
+
+      // Always draw the arriving shell, fading it in.
+      drawShellLine(arrivingN_val, progress);
+
+      // If departing from a DIFFERENT shell, also draw it fading out.
+      if (departingN_val !== arrivingN_val && departingN_val >=1 && departingN_val <=5) {
+          drawShellLine(departingN_val, 1 - progress);
+      }
+      // If departingN_val is the same as arrivingN_val (e.g., re-selecting the same shell),
+      // the arriving shell (fading in) will be the dominant one.
+      // The (1-progress) fade-out for the same shell would visually compete, so the above condition handles it well.
+
+    } else {
+      // When stable, draw the current (now stable) orbit line with full alpha
+      drawShellLine(currentN, 1);
+    }
+  }
+
+  function drawOrbitPulseEffect(orbitPathRadius, pulseAmplitude, alpha) { /* ... unchanged ... */
+    if (pulseAmplitude !== 0 && orbitTransition.active) {
+        ctx.beginPath();
+        ctx.strokeStyle = `rgba(0,255,255,${alpha * 0.5})`;
+        ctx.lineWidth = 4;
+        ctx.arc(centerX, centerY, orbitPathRadius + pulseAmplitude, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+    }
+  }
+
+  function drawElectron(angle, radius, dynamicPulseOffset) { /* ... unchanged ... */
+    const wobble = Math.sin(performance.now() / 300) * 3;
+    const finalRadius = radius + dynamicPulseOffset + wobble;
+    const x = centerX + finalRadius * Math.cos(angle);
+    const y = centerY + finalRadius * Math.sin(angle);
+
+    trail.push({ x, y, alpha: 1 });
+    if (trail.length > 20) trail.shift();
+
+    for (let i = trail.length - 1; i >= 0; i--) {
+        const t = trail[i];
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${t.alpha * 0.15})`;
+        ctx.fill();
+        t.alpha -= 0.05;
+        if (t.alpha <= 0) trail.splice(i, 1);
+    }
+
+    ctx.beginPath();
+    const electronDisplayColor = getElectronColor();
+    ctx.shadowColor = electronDisplayColor;
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = electronDisplayColor;
+    ctx.arc(x, y, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  function drawPhotons(time) { /* ... unchanged ... */
+    for (let i = photons.length - 1; i >= 0; i--) {
+      const p = photons[i];
+      if (p.dir === 1) { p.radius -= 2; }
+      else { p.radius += 2; }
+      p.alpha -= 0.015;
+
+      for (let w = 0; w < 3; w++) {
+        ctx.beginPath();
+        const photonBaseColor = p.color === "#00ffff" ? "0,255,255" : "255,215,0";
+        ctx.strokeStyle = `rgba(${photonBaseColor},${p.alpha * (1 - w * 0.25)})`;
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 10]);
+        let startRad, endRad;
+        if (p.dir === 1) {
+            startRad = p.radius + p.waveLength * (w + 1); endRad = p.radius + p.waveLength * w;
+        } else {
+            startRad = p.radius + p.waveLength * w; endRad = p.radius + p.waveLength * (w + 1);
+        }
+        const waveStartX = centerX + startRad * Math.cos(p.angle);
+        const waveStartY = centerY + startRad * Math.sin(p.angle);
+        const waveEndX = centerX + endRad * Math.cos(p.angle);
+        const waveEndY = centerY + endRad * Math.sin(p.angle);
+        ctx.moveTo(waveStartX, waveStartY); ctx.lineTo(waveEndX, waveEndY);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      if (p.alpha <= 0 || (p.dir === 1 && p.radius <= 0) || (p.dir === -1 && p.radius > canvas.width)) {
+        photons.splice(i, 1);
+      }
+    }
+  }
+
+
+  function animate(time) {
+    const deltaTime = time - lastTime;
+    lastTime = time;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    drawNucleus();
+    // CALLING THE NEW ANIMATED SHELL DRAWING FUNCTION
+    drawAnimatedShellChange();
+
+    let pulseAmplitude = 0;
+
+    if (orbitTransition.active) {
+      orbitTransition.progress += 0.0005 * deltaTime;
+      if (orbitTransition.progress >= 1) {
+        orbitTransition.progress = 1;
+        orbitTransition.active = false;
+        currentN = targetN; // Electron is now officially in the target shell
+        currentRadius = baseOrbitRadiusUnit * currentN; // Update currentRadius to be precise
+        easedRadius = currentRadius;
+        energyChange = 0;
+      } else {
+        const t = orbitTransition.progress;
+        const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        easedRadius = orbitTransition.startRadius + (orbitTransition.endRadius - orbitTransition.startRadius) * ease;
+      }
+      pulseAmplitude = 10 * Math.sin(Math.PI * orbitTransition.progress);
+      drawOrbitPulseEffect(easedRadius, pulseAmplitude, 1 - orbitTransition.progress);
+    } else {
+      // Ensure easedRadius reflects the stable currentRadius when not transitioning
+      currentRadius = baseOrbitRadiusUnit * currentN; // Keep currentRadius accurate
+      easedRadius = currentRadius;
+      energyChange = 0;
+    }
+
+    const effectiveN = Math.max(1, easedRadius / baseOrbitRadiusUnit);
+    const angularSpeedDenominator = 1000 + Math.max(0, effectiveN - 1) * 500;
+    const baseAngularIncrement = (Math.PI * 0.75) / angularSpeedDenominator;
+    const angularIncrement = baseAngularIncrement * deltaTime;
+    electronAccumulatedAngle += angularIncrement;
+
+    drawElectron(electronAccumulatedAngle, easedRadius, pulseAmplitude);
+    drawPhotons(time);
+    requestAnimationFrame(animate);
+  }
+
+  // Initial setup
+  easedRadius = baseOrbitRadiusUnit * currentN;
+  updateShellName(currentN);
+  lastTime = performance.now();
+  requestAnimationFrame(animate);
+</script>
+</body>
+</html>
