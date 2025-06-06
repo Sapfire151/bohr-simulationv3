@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Bohr Model Simulation - Academic Edition</title>
+<style>
+  :root {
+    --bg-color: #1a1a1a;
+    --text-color: #f5f5f7;
+    --text-color-secondary: #a1a1a6;
+    --primary-accent: #007aff;
+    --control-bg: #333338;
+    --separator-color: #3a3a3c;
+    --shadow-color: rgba(0, 0, 0, 0.4);
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+
+  [data-theme="light"] {
+    --bg-color: #f5f5f7;
+    --text-color: #1d1d1f;
+    --text-color-secondary: #6e6e73;
+    --control-bg: #e9e9eb;
+    --separator-color: #d1d1d6;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+  }
+
+  body {
+    margin: 0;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: var(--font-family);
+    text-align: center;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    min-height: 100vh;
+    box-sizing: border-box;
+    transition: background 0.3s ease, color 0.3s ease;
+    overflow: hidden;
+  }
+
+  .app-container {
+    width: 100%;
+    max-width: 550px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .main-title {
+    font-size: 2.5rem;
+    font-weight: 600;
+    margin: 0;
+  }
+
+  .description {
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text-color-secondary);
+    max-width: 90%;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+
+  .energy-selector-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .control-label {
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  
+  .segmented-control {
+    display: flex;
+    background-color: var(--control-bg);
+    border-radius: 9px;
+    padding: 3px;
+    box-shadow: 0 1px 3px var(--shadow-color);
+  }
+
+  .segmented-control button {
+    background-color: transparent;
+    border: none;
+    padding: 8px 20px;
+    font-family: var(--font-family);
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    border-radius: 7px;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+  
+  .segmented-control button.active {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+  }
+  
+  .utility-button {
+    position: fixed;
+    width: 48px;
+    height: 48px;
+    background-color: var(--control-bg);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color);
+  }
+  
+  .utility-button:hover {
+    transform: scale(1.1);
+  }
+
+  .utility-button svg {
+    width: 24px;
+    height: 24px;
+    fill: var(--text-color-secondary);
+  }
+
+  #lang-switcher { top: 20px; right: 20px; }
+  #theme-switcher { bottom: 20px; right: 20px; }
+
+  .canvas-wrapper {
+    position: relative;
+    width: 520px;
+    height: 520px;
+    margin: 0 auto;
+  }
+
+  .canvas-container {
+    display: inline-block;
+    border-radius: 16px;
+    background: radial-gradient(ellipse at center, #1c1c1e 0%, #000000 100%);
+    padding: 10px;
+    box-shadow: 0 8px 15px var(--shadow-color);
+  }
+
+  [data-theme="light"] .canvas-container {
+    background: radial-gradient(ellipse at center, #ffffff 0%, #e8e8f0 100%);
+  }
+  
+  #info-panel {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    background: rgba(40, 40, 40, 0.7);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border-radius: 10px;
+    padding: 10px 15px;
+    text-align: left;
+    font-size: 0.9rem;
+    color: #f0f0f0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: all 0.3s ease;
+  }
+  [data-theme="light"] #info-panel {
+    background: rgba(255, 255, 255, 0.7);
+    color: #333;
+    border-color: rgba(0,0,0,0.1);
+  }
+  #info-panel p { margin: 4px 0; }
+  #info-panel .label { font-weight: 600; color: var(--text-color-secondary); }
+  #info-panel .value { font-weight: bold; color: var(--text-color); }
+  #info-panel .transition-info { 
+    margin-top: 8px; 
+    padding-top: 8px; 
+    border-top: 1px solid var(--separator-color);
+  }
+
+  canvas { display: block; }
+  #energyLevel { display: none; }
+</style>
+</head>
+<body>
+  
+  <button id="lang-switcher" class="utility-button" aria-label="Switch Language">EN</button>
+  <button id="theme-switcher" class="utility-button" aria-label="Switch Theme"></button>
+
+  <div class="app-container">
+
+    <div class="header">
+      <h1 class="main-title" data-lang-key="main_title">Bohr Model</h1>
+      <p class="description" data-lang-key="description">An interactive simulation of the Bohr atomic model. Select an energy level to see the electron transition.</p>
+    </div>
+
+    <div class="energy-selector-container">
+      <label class="control-label" data-lang-key="energy_level">Select Target Energy Level (n)</label>
+      <div id="energySelector" class="segmented-control">
+          <button value="1" class="active">K</button>
+          <button value="2">L</button>
+          <button value="3">M</button>
+          <button value="4">N</button>
+          <button value="5">O</button>
+      </div>
+    </div>
+    
+    <input type="number" id="energyLevel" min="1" max="5" value="1" />
+
+    <div class="canvas-wrapper">
+      <div class="canvas-container">
+        <canvas id="atomCanvas" width="500" height="500"></canvas>
+      </div>
+      <div id="info-panel"></div>
+    </div>
+
+  </div>
+
+<script>
+  // --- DICTIONARY & UI CONTROL ---
+  const translations = {
+    en: {
+      main_title: "Bohr Model",
+      description: "An interactive simulation of the Bohr atomic model. Select a target energy level to observe the electron transition.",
+      energy_level: "Select Target Energy Level (n)",
+      panel_level: "Energy Level (n):",
+      panel_energy: "Level Energy:",
+      panel_status: "Status:",
+      status_ground: "In Ground State",
+      status_excited: "In Excited State",
+      status_emitting: "Emitting Photon",
+      status_absorbing: "Absorbing Photon",
+      panel_photon_energy: "Photon Energy (ΔE):",
+      panel_photon_wavelength: "Wavelength (λ):"
+    },
+    th: {
+      main_title: "แบบจำลองอะตอมของโบร์",
+      description: "แบบจำลองอะตอมเชิงโต้ตอบของโบร์ เลือกเป้าหมายระดับพลังงานเพื่อดูการเปลี่ยนแปลงของอิเล็กตรอน",
+      energy_level: "เลือกเป้าหมายระดับพลังงาน (n)",
+      panel_level: "ระดับพลังงาน (n):",
+      panel_energy: "พลังงานของระดับ:",
+      panel_status: "สถานะ:",
+      status_ground: "ในสถานะพื้น",
+      status_excited: "ในสถานะกระตุ้น",
+      status_emitting: "กำลังปล่อยโฟตอน",
+      status_absorbing: "กำลังดูดกลืนโฟตอน",
+      panel_photon_energy: "พลังงานโฟตอน (ΔE):",
+      panel_photon_wavelength: "ความยาวคลื่น (λ):"
+    }
+  };
+
+  const themeIcons = {
+    light: `<svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.82.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/></svg>`,
+    dark: `<svg viewBox="0 0 24 24"><path d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM12 9c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0-7C7.05 2 2 7.05 2 12s5.05 10 10 10 10-5.05 10-10S16.95 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/></svg>`
+  };
+
+  const langButton = document.getElementById('lang-switcher');
+  const themeButton = document.getElementById('theme-switcher');
+  const infoPanel = document.getElementById('info-panel');
+
+  function setLanguage(lang, initial = false) {
+    const currentLang = document.documentElement.lang;
+    if (!initial) lang = currentLang === 'en' ? 'th' : 'en';
+    document.documentElement.lang = lang;
+    localStorage.setItem('simulationLanguage', lang);
+    document.querySelectorAll('[data-lang-key]').forEach(el => {
+      const key = el.getAttribute('data-lang-key');
+      el.textContent = translations[lang][key];
+    });
+    langButton.textContent = lang === 'en' ? 'TH' : 'EN';
+  }
+
+  function setTheme(theme, initial = false) {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    if (!initial) theme = currentTheme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('simulationTheme', theme);
+    themeButton.innerHTML = theme === 'dark' ? themeIcons.dark : themeIcons.light;
+  }
+  
+  langButton.addEventListener('click', () => setLanguage(null));
+  themeButton.addEventListener('click', () => setTheme(null));
+
+  document.getElementById('energySelector').addEventListener('click', (e) => {
+    if (e.target.tagName === 'BUTTON') {
+      const value = e.target.value;
+      const energyInput = document.getElementById('energyLevel');
+      if (parseInt(energyInput.value) !== parseInt(value)) {
+        energyInput.value = value;
+        energyInput.dispatchEvent(new Event('change'));
+      }
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const savedTheme = localStorage.getItem('simulationTheme') || 'dark';
+    const savedLang = localStorage.getItem('simulationLanguage') || 'en';
+    setTheme(savedTheme, true);
+    setLanguage(savedLang, true);
+    requestAnimationFrame(animate);
+  });
+
+  // --- SIMULATION SCRIPT ---
+  const shellMap = { 1: "K", 2: "L", 3: "M", 4: "N", 5: "O" };
+  const canvas = document.getElementById("atomCanvas");
+  const ctx = canvas.getContext("2d");
+  const centerX = canvas.width / 2;
+  const centerY = canvas.height / 2;
+
+  // --- Physical Constants & Model Parameters ---
+  const RYDBERG_EV = 13.6; // Rydberg energy in eV
+  const HC_EV_NM = 1240; // Planck's constant * speed of light in eV*nm
+  const maxOrbitRadius = 230; 
+  const radiusPower = 1.7; // Adjusted for better visual spacing
+  const baseOrbitRadiusUnit = maxOrbitRadius / Math.pow(5, radiusPower); 
+
+  let currentN = 1;
+  let targetN = 1;
+  const photons = [];
+  let orbitTransition = { active: false, progress: 0, startN: 1, endN: 1, deltaE: 0, wavelength: 0 };
+  let lastTime = performance.now();
+  let electronAccumulatedAngle = 0;
+
+  const energyInput = document.getElementById("energyLevel");
+
+  energyInput.addEventListener("change", e => {
+    const newN = parseInt(e.target.value);
+    if (newN !== currentN && !orbitTransition.active) {
+      targetN = newN;
+      
+      const energyInitial = getEnergy(currentN);
+      const energyFinal = getEnergy(newN);
+      const deltaE = Math.abs(energyFinal - energyInitial);
+      const wavelength = HC_EV_NM / deltaE;
+      
+      const isEmitting = newN < currentN;
+      const startRadius = getRadius(currentN);
+      
+      photons.push({
+          dir: isEmitting ? -1 : 1,
+          radius: isEmitting ? startRadius : canvas.width / 2, 
+          targetRadius: isEmitting ? canvas.width / 2 : startRadius,
+          angle: electronAccumulatedAngle + Math.PI,
+          alpha: 1.0,
+          color: getPhotonColorForTransition(currentN, targetN)
+      });
+      
+      orbitTransition = { active: true, progress: 0, startN: currentN, endN: newN, deltaE: deltaE, wavelength: wavelength };
+    }
+  });
+
+  // --- Physics & Drawing Functions ---
+  function getEnergy(n) { return -RYDBERG_EV / (n * n); }
+  function getRadius(n) { return baseOrbitRadiusUnit * Math.pow(n, radiusPower); }
+
+  function getPhotonColorForTransition(n_i, n_f) {
+      if (n_i === n_f) return "hsl(0, 0%, 100%)";
+      const energy = Math.abs(1 / (n_f * n_f) - 1 / (n_i * n_i));
+      const maxEnergy = Math.abs(1 / (1 * 1) - 1 / (5 * 5));
+      const normalizedEnergy = energy / maxEnergy;
+      const hue = 270 - (normalizedEnergy * 270);
+      return `hsl(${hue}, 100%, 65%)`;
+  }
+
+  function drawNucleus() {
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 12, 0, Math.PI * 2);
+    ctx.fillStyle = "#f39c12";
+    ctx.shadowColor = "#f39c12";
+    ctx.shadowBlur = 20;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+
+  function drawShellLine(n_value, alpha) {
+    if (n_value < 1 || alpha <= 0) return;
+    const radius = getRadius(n_value);
+    const shellLetter = shellMap[n_value];
+    const isDarkTheme = document.documentElement.getAttribute('data-theme') === 'dark';
+    const lineColor = isDarkTheme ? `rgba(100, 150, 255, ${0.2 * alpha})` : `rgba(80, 130, 220, ${0.2 * alpha})`;
+    const labelColor = isDarkTheme ? `rgba(150, 200, 255, ${0.6 * alpha})` : `rgba(50, 100, 180, ${0.6 * alpha})`;
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    ctx.strokeStyle = lineColor;
+    ctx.setLineDash([4, 4]);
+    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (shellLetter) {
+      ctx.fillStyle = labelColor;
+      ctx.font = "14px var(--font-family)";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "middle";
+      ctx.fillText(shellLetter, centerX + radius + 8, centerY);
+    }
+    ctx.restore();
+  }
+
+  function drawElectron(angle, radius, opacity) {
+    if (opacity <= 0) return;
+    const x = centerX + radius * Math.cos(angle);
+    const y = centerY + radius * Math.sin(angle);
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.beginPath();
+    const color = `rgb(231, 76, 60)`;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 15;
+    ctx.fillStyle = color;
+    ctx.arc(x, y, 8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawPhotons() {
+    for (let i = photons.length - 1; i >= 0; i--) {
+        const p = photons[i];
+        p.radius -= p.dir * 6; // Photon speed
+        p.alpha -= 0.025;
+        if (p.alpha <= 0) { photons.splice(i, 1); continue; }
+
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        const x = centerX + p.radius * Math.cos(p.angle);
+        const y = centerY + p.radius * Math.sin(p.angle);
+        
+        // Draw trail
+        const trailLength = 5;
+        for (let j = 0; j < trailLength; j++) {
+            const trailX = centerX + (p.radius + j * p.dir * 5) * Math.cos(p.angle);
+            const trailY = centerY + (p.radius + j * p.dir * 5) * Math.sin(p.angle);
+            ctx.beginPath();
+            const trailAlpha = (1 - j / trailLength) * 0.5;
+            ctx.fillStyle = p.color;
+            ctx.arc(trailX, trailY, 4 * (1 - j / trailLength), 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        
+        // Draw main photon
+        ctx.beginPath();
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 20;
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.restore();
+    }
+  }
+  
+  function updateInfoPanel() {
+    const lang = document.documentElement.lang;
+    const t = translations[lang];
+    let panelHTML = '';
+
+    let status_text = '';
+    if (orbitTransition.active) {
+        status_text = orbitTransition.endN > orbitTransition.startN ? t.status_absorbing : t.status_emitting;
+    } else {
+        status_text = currentN === 1 ? t.status_ground : t.status_excited;
+    }
+
+    panelHTML += `<p><span class="label">${t.panel_level}</span> <span class="value">${shellMap[currentN]} (n=${currentN})</span></p>`;
+    panelHTML += `<p><span class="label">${t.panel_energy}</span> <span class="value">${getEnergy(currentN).toFixed(2)} eV</span></p>`;
+    panelHTML += `<p><span class="label">${t.panel_status}</span> <span class="value">${status_text}</span></p>`;
+
+    if (orbitTransition.active) {
+      panelHTML += `<div class="transition-info">`;
+      panelHTML += `<p><span class="label">${t.panel_photon_energy}</span> <span class="value">${orbitTransition.deltaE.toFixed(2)} eV</span></p>`;
+      panelHTML += `<p><span class="label">${t.panel_photon_wavelength}</span> <span class="value">${orbitTransition.wavelength.toFixed(0)} nm</span></p>`;
+      panelHTML += `</div>`;
+    }
+    
+    infoPanel.innerHTML = panelHTML;
+  }
+
+  function updateActiveButton() {
+      document.querySelectorAll('#energySelector button').forEach(btn => {
+          btn.classList.toggle('active', parseInt(btn.value) === currentN);
+      });
+  }
+
+  function animate(time) {
+    const deltaTime = time - lastTime;
+    lastTime = time;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    drawNucleus();
+
+    // Angular speed proportional to 1/n^2 (related to Keplers laws)
+    const angularIncrement = (1 / (currentN * currentN)) * 0.005 * deltaTime;
+    electronAccumulatedAngle += angularIncrement;
+
+    if (orbitTransition.active) {
+      // --- Quantum Leap Animation ---
+      orbitTransition.progress += 0.005 * deltaTime; // Leap speed
+      
+      const startRadius = getRadius(orbitTransition.startN);
+      const endRadius = getRadius(orbitTransition.endN);
+      
+      // Fade out from start, fade in at end
+      drawShellLine(orbitTransition.startN, 1 - orbitTransition.progress);
+      drawShellLine(orbitTransition.endN, orbitTransition.progress);
+      drawElectron(electronAccumulatedAngle, startRadius, 1 - orbitTransition.progress);
+      drawElectron(electronAccumulatedAngle, endRadius, orbitTransition.progress);
+
+      if (orbitTransition.progress >= 1) {
+        currentN = orbitTransition.endN;
+        orbitTransition.active = false;
+        updateActiveButton();
+      }
+    } else {
+      // --- Stable State Animation ---
+      const radius = getRadius(currentN);
+      drawShellLine(currentN, 1.0);
+      drawElectron(electronAccumulatedAngle, radius, 1.0);
+    }
+    
+    drawPhotons();
+    updateInfoPanel();
+    requestAnimationFrame(animate);
+  }
+</script>
+</body>
+</html>
